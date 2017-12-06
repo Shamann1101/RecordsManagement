@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.19;
 
 library Structures {
 
@@ -15,10 +15,6 @@ library Structures {
     }
 }
 
-/*
-"1", "2", "3", "4"
-"2", "2", "1511827200", "3600"
-*/
 contract RecordsManagement {
 
     mapping (bytes32 => Structures.Record) records;
@@ -29,6 +25,9 @@ contract RecordsManagement {
 
     event Add (string title, string desc, uint256 life_time);
 
+    /**
+     * @dev Works if there is an index
+     */
     modifier index_isset(string index) {
         for (uint i = 0; i < indexes.length; i++) {
             if (indexes[i] == keccak256(index)) {
@@ -38,10 +37,12 @@ contract RecordsManagement {
         }
     }
 
+    /**
+     * @dev Works if life_time has not expired
+     */
     modifier life_time_cycle (string index) {
         uint die_day = records[keccak256(index)].creation_date + records[keccak256(index)].life_time;
-        uint today = now;
-        if (die_day < today) {
+        if (die_day < now) {
            del(index);
         } else {
             _;
@@ -55,33 +56,62 @@ contract RecordsManagement {
 
     }
 
-    function add(string title, string desc, uint256 life_time) public returns(bool){
+    /**
+     * @dev Adding a record, returns true if ok
+     * @param title Title of record.
+     * @param desc Description of record.
+     * @param life_time Life time of record.
+     * @return bool
+     */
+    function add(string title, string desc, uint256 life_time) public returns(bool) {
         records[keccak256(title)] = Structures.Record(title, desc, now, life_time);
         indexes.push(keccak256(title));
         Add (title, desc, life_time);
         return true;
     }
 
-    function edit(string title, string desc, uint256 life_time) public index_isset(title) life_time_cycle(title) returns(bool){
+    /**
+     * @dev Editing a record, returns true if ok
+     * @param title Title of record.
+     * @param desc Description of record.
+     * @param life_time Life time of record.
+     * @return bool
+     */
+    function edit(string title, string desc, uint256 life_time) public index_isset(title) life_time_cycle(title) returns(bool) {
         records[keccak256(title)] = Structures.Record(title, desc, records[keccak256(title)].creation_date, life_time);
         return true;
     }
 
+    /**
+     * @dev Searching a record
+     * @param index Title of record.
+     * @return Structures.Record
+     */
     function search(string index) public life_time_cycle(index) returns(Structures.Record) {
         for (uint i = 0; i < indexes.length; i++) {
             if (indexes[i] == keccak256(index)) {
-                return records[keccak256(index)];
+                return (records[keccak256(index)]);
             }
         }
         return;
     }
 
-    function del(string index) public index_isset(index) returns(bool){
+    /**
+     * @dev Delete a record, returns true if ok
+     * @param index Title of record.
+     * @return bool
+     */
+    function del(string index) public index_isset(index) returns(bool) {
         delete records[keccak256(index)];
         remove_index(index_i);
         return true;
     }
 
+    /**
+     * @dev Remove index from indexes array
+     * @param index Title of record.
+     * @return bytes32[]
+     */
     function remove_index(uint index) internal returns(bytes32[]) {
         if (index >= indexes.length) return;
 
@@ -92,21 +122,37 @@ contract RecordsManagement {
         return indexes;
     }
 
-    function indexesLength() public constant returns(uint){
+    /**
+     * @dev Returns length of indexes array
+     * @return uint
+     */
+    function indexesLength() public constant returns(uint) {
         return indexes.length;
     }
-    
-    function get_title(string index) public index_isset(index) returns(string) {
+
+    /**
+     * @dev Returns a title of a record by index
+     * @param index Title of record.
+     * @return string
+     */
+    function get_title(string index) public constant index_isset(index) returns(string) {
         return records[keccak256(index)].title;
     }
-    
-    function iterate() public{
+
+    function iterate() public constant returns(string) {
+// TODO: Put it in the loop
+//        uint inlen = indexes.length;
+//        bytes[inlen][] titles;
+        uint today = now;
         for (uint i = 0; i < indexes.length; i++) {
-            search(records[indexes[i]].title);
+            uint die_day = records[indexes[i]].creation_date + records[indexes[i]].life_time;
+            if (die_day > today) {
+                return records[indexes[i]].title;
+            }
         }
     }
 
-    function indexes_view() public{
-        // Need action
+    function indexes_view() public constant returns(bytes32[]) {
+        return indexes;
     }
 }
