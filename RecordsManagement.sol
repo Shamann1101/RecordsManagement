@@ -17,13 +17,13 @@ library Structures {
 
 contract RecordsManagement {
 
-    mapping (bytes32 => Structures.Record) records;
+    mapping(bytes32 => Structures.Record) records;
 
     bytes32[] indexes;
 
     uint index_i;
 
-    event Add (string title, string desc, uint256 life_time);
+    event Add(string title, string desc, uint256 life_time);
 
     /**
      * @dev Works if there is an index
@@ -40,18 +40,21 @@ contract RecordsManagement {
     /**
      * @dev Works if life_time has not expired
      */
-    modifier life_time_cycle (string index) {
+    modifier life_time_cycle(string index) {
         uint die_day = records[keccak256(index)].creation_date + records[keccak256(index)].life_time;
         if (die_day < now) {
-           del(index);
+            del(index);
         } else {
             _;
         }
     }
 
+    /**
+     * @dev Constructor
+     */
     function RecordsManagement() public {
 
-        add("1", "2", 3);
+        add("1", "2", 30);
         add("2", "2", 3600);
 
     }
@@ -64,9 +67,10 @@ contract RecordsManagement {
      * @return bool
      */
     function add(string title, string desc, uint256 life_time) public returns(bool) {
+        // TODO: Add an index existence check
         records[keccak256(title)] = Structures.Record(title, desc, now, life_time);
         indexes.push(keccak256(title));
-        Add (title, desc, life_time);
+        Add(title, desc, life_time);
         return true;
     }
 
@@ -115,8 +119,8 @@ contract RecordsManagement {
     function remove_index(uint index) internal returns(bytes32[]) {
         if (index >= indexes.length) return;
 
-        indexes[index] = indexes[indexes.length-1];
-        delete indexes[indexes.length-1];
+        indexes[index] = indexes[indexes.length - 1];
+        delete indexes[indexes.length - 1];
         indexes.length--;
 
         return indexes;
@@ -139,20 +143,14 @@ contract RecordsManagement {
         return records[keccak256(index)].title;
     }
 
-    function iterate() public constant returns(string) {
-// TODO: Put it in the loop
-//        uint inlen = indexes.length;
-//        bytes[inlen][] titles;
-        uint today = now;
+    /**
+     * @dev Returns array of encoded indexes
+     * @return bytes32[]
+     */
+    function indexes_view() public returns(bytes32[]) {
         for (uint i = 0; i < indexes.length; i++) {
-            uint die_day = records[indexes[i]].creation_date + records[indexes[i]].life_time;
-            if (die_day > today) {
-                return records[indexes[i]].title;
-            }
+            search(records[indexes[i]].title);
         }
-    }
-
-    function indexes_view() public constant returns(bytes32[]) {
         return indexes;
     }
 }
