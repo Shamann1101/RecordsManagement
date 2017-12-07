@@ -24,6 +24,8 @@ contract RecordsManagement {
     uint index_i;
 
     event Add(string title, string desc, uint256 life_time);
+    event Edit(string title, string desc, uint256 life_time);
+    event Del(string index);
 
     /**
      * @dev Works if there is an index
@@ -83,18 +85,31 @@ contract RecordsManagement {
      */
     function edit(string title, string desc, uint256 life_time) public index_isset(title) life_time_cycle(title) returns(bool) {
         records[keccak256(title)] = Structures.Record(title, desc, records[keccak256(title)].creation_date, life_time);
+        Edit(title, desc, life_time);
         return true;
     }
 
     /**
      * @dev Searching a record
      * @param index Title of record.
-     * @return Structures.Record
+     * @return bool status, string title, string description, uint256 creation_date, uint256 life_time
      */
-    function search(string index) public life_time_cycle(index) returns(Structures.Record) {
+    function search(string index) public life_time_cycle(index) returns(
+        bool,
+        string,
+        string,
+        uint256,
+        uint256
+        ) {
         for (uint i = 0; i < indexes.length; i++) {
             if (indexes[i] == keccak256(index)) {
-                return (records[keccak256(index)]);
+                return (
+                    true,
+                    records[keccak256(index)].title,
+                    records[keccak256(index)].desc,
+                    records[keccak256(index)].creation_date,
+                    records[keccak256(index)].life_time
+                );
             }
         }
         return;
@@ -108,6 +123,7 @@ contract RecordsManagement {
     function del(string index) public index_isset(index) returns(bool) {
         delete records[keccak256(index)];
         remove_index(index_i);
+        Del(index);
         return true;
     }
 
