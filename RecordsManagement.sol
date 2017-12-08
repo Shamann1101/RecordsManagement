@@ -30,9 +30,9 @@ contract RecordsManagement {
     /**
      * @dev Works if there is an index
      */
-    modifier index_isset(string index) {
+    modifier index_isset(string _title) {
         for (uint i = 0; i < indexes.length; i++) {
-            if (indexes[i] == keccak256(index)) {
+            if (indexes[i] == keccak256(_title)) {
                 index_i = i;
                 _;
             }
@@ -42,10 +42,10 @@ contract RecordsManagement {
     /**
      * @dev Works if life_time has not expired
      */
-    modifier life_time_cycle(string index) {
-        uint die_day = records[keccak256(index)].creation_date + records[keccak256(index)].life_time;
+    modifier life_time_cycle(string _title) {
+        uint die_day = records[keccak256(_title)].creation_date + records[keccak256(_title)].life_time;
         if (die_day < now) {
-            del(index);
+            del(_title);
         } else {
             _;
         }
@@ -63,52 +63,60 @@ contract RecordsManagement {
 
     /**
      * @dev Adding a record, returns true if ok
-     * @param title Title of record.
-     * @param desc Description of record.
-     * @param life_time Life time of record.
+     * @param _title Title of record.
+     * @param _desc Description of record.
+     * @param _life_time Life time of record.
      * @return bool
      */
-    function add(string title, string desc, uint256 life_time) public returns(bool) {
-        // TODO: Add an index existence check
-        records[keccak256(title)] = Structures.Record(title, desc, now, life_time);
-        indexes.push(keccak256(title));
-        Add(title, desc, life_time);
+    function add(string _title, string _desc, uint256 _life_time) public returns(bool) {
+        bool state;
+        string memory title;
+        string memory desc;
+        uint256 creation_date;
+        uint256 life_time;
+        (state, title, desc, creation_date, life_time) = search(_title);
+        if (state == true)
+            return;
+
+        records[keccak256(_title)] = Structures.Record(_title, _desc, now, _life_time);
+        indexes.push(keccak256(_title));
+        Add(_title, _desc, _life_time);
         return true;
     }
 
     /**
      * @dev Editing a record, returns true if ok
-     * @param title Title of record.
-     * @param desc Description of record.
-     * @param life_time Life time of record.
+     * @param _title Title of record.
+     * @param _desc Description of record.
+     * @param _life_time Life time of record.
      * @return bool
      */
-    function edit(string title, string desc, uint256 life_time) public index_isset(title) life_time_cycle(title) returns(bool) {
-        records[keccak256(title)] = Structures.Record(title, desc, records[keccak256(title)].creation_date, life_time);
-        Edit(title, desc, life_time);
+    function edit(string _title, string _desc, uint256 _life_time) public index_isset(_title) life_time_cycle(_title) returns(bool) {
+        records[keccak256(_title)] = Structures.Record(_title, _desc, records[keccak256(_title)].creation_date, _life_time);
+        Edit(_title, _desc, _life_time);
         return true;
     }
 
     /**
      * @dev Searching a record
-     * @param index Title of record.
-     * @return bool status, string title, string description, uint256 creation_date, uint256 life_time
+     * @param _title Title of record.
+     * @return bool state, string title, string description, uint256 creation_date, uint256 life_time
      */
-    function search(string index) public life_time_cycle(index) returns(
-        bool,
-        string,
-        string,
-        uint256,
-        uint256
+    function search(string _title) public life_time_cycle(_title) returns(
+        bool state,
+        string title,
+        string description,
+        uint256 creation_date,
+        uint256 life_time
         ) {
         for (uint i = 0; i < indexes.length; i++) {
-            if (indexes[i] == keccak256(index)) {
+            if (indexes[i] == keccak256(_title)) {
                 return (
                     true,
-                    records[keccak256(index)].title,
-                    records[keccak256(index)].desc,
-                    records[keccak256(index)].creation_date,
-                    records[keccak256(index)].life_time
+                    records[keccak256(_title)].title,
+                    records[keccak256(_title)].desc,
+                    records[keccak256(_title)].creation_date,
+                    records[keccak256(_title)].life_time
                 );
             }
         }
@@ -117,25 +125,25 @@ contract RecordsManagement {
 
     /**
      * @dev Delete a record, returns true if ok
-     * @param index Title of record.
+     * @param _title Title of record.
      * @return bool
      */
-    function del(string index) public index_isset(index) returns(bool) {
-        delete records[keccak256(index)];
+    function del(string _title) public index_isset(_title) returns(bool) {
+        delete records[keccak256(_title)];
         remove_index(index_i);
-        Del(index);
+        Del(_title);
         return true;
     }
 
     /**
      * @dev Remove index from indexes array
-     * @param index Title of record.
+     * @param _index Title of record.
      * @return bytes32[]
      */
-    function remove_index(uint index) internal returns(bytes32[]) {
-        if (index >= indexes.length) return;
+    function remove_index(uint _index) internal returns(bytes32[]) {
+        if (_index >= indexes.length) return;
 
-        indexes[index] = indexes[indexes.length - 1];
+        indexes[_index] = indexes[indexes.length - 1];
         delete indexes[indexes.length - 1];
         indexes.length--;
 
@@ -151,19 +159,19 @@ contract RecordsManagement {
     }
 
     /**
-     * @dev Returns a title of a record by index
-     * @param index Title of record.
+     * @dev Returns a title of a record by encoded index
+     * @param _index Title of record.
      * @return string
      */
-    function get_title(string index) public constant index_isset(index) returns(string) {
-        return records[keccak256(index)].title;
+    function get_title(bytes32 _index) public constant returns(string) {
+        return records[_index].title;
     }
 
     /**
      * @dev Returns array of encoded indexes
      * @return bytes32[]
      */
-    function indexes_view() public returns(bytes32[]) {
+    function indexesView() public returns(bytes32[]) {
         for (uint i = 0; i < indexes.length; i++) {
             search(records[indexes[i]].title);
         }
